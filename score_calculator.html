@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KAPLAスコア計算ツール</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    label {
+      margin-right: 10px;
+    }
+    input {
+      margin-bottom: 10px;
+    }
+    canvas {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div>
+    <h1>KAPLAスコア計算ツール</h1>
+    <label for="kapla-count">使用KAPLA数:</label>
+    <input id="kapla-count" type="number" min="0" max="200" value="0" />
+    <br>
+    <label for="weight">耐荷重(kg):</label>
+    <input id="weight" type="number" min="0" step="0.01" value="0" />
+    <br>
+    <label for="art-score">芸術点 (0-150):</label>
+    <input id="art-score" type="number" min="0" max="150" value="0" />
+    <br>
+    <button id="calculate">スコアを計算</button>
+    <h2>結果</h2>
+    <p id="result">スコア: </p>
+    <canvas id="score-chart" width="400" height="200"></canvas>
+  </div>
+
+  <script>
+    function calculateScore(kaplaCount, weight, artScore) {
+      const MAX_COST_SCORE = 300;
+      const WEIGHT_POINTS_PER_20G = 10;
+      const costScore = MAX_COST_SCORE - kaplaCount;
+      const weightScore = (weight * 1000 / 20) * WEIGHT_POINTS_PER_20G;
+      return costScore + weightScore + artScore;
+    }
+
+    function renderChart(costScore, weightScore, artScore) {
+      const ctx = document.getElementById('score-chart').getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['コスト得点', '耐荷重得点', '芸術点'],
+          datasets: [{
+            label: '得点',
+            data: [costScore, weightScore, artScore],
+            backgroundColor: ['#ff9999', '#99ccff', '#99ff99']
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
+
+    document.getElementById("calculate").addEventListener("click", () => {
+      const kaplaCount = parseInt(document.getElementById("kapla-count").value, 10) || 0;
+      const weight = parseFloat(document.getElementById("weight").value) || 0;
+      const artScore = parseInt(document.getElementById("art-score").value, 10) || 0;
+
+      const costScore = 300 - kaplaCount;
+      const weightScore = (weight * 1000 / 20) * 10;
+      const totalScore = calculateScore(kaplaCount, weight, artScore);
+
+      document.getElementById("result").textContent = `スコア: ${totalScore.toFixed(2)}`;
+      renderChart(costScore, weightScore, artScore);
+    });
+  </script>
+</body>
+</html>
