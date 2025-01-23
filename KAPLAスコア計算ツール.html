@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KAPLAスコア計算ツール</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f8f9fa;
+      margin: 20px;
+    }
+    .card {
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    #error-message {
+      color: red;
+      font-weight: bold;
+      animation: fadeIn 0.3s;
+    }
+    .charts-container {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .chart-wrapper {
+      flex: 1;
+      min-width: 300px;
+      max-width: 48%;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="text-center my-4">KAPLAスコア計算ツール</h1>
+
+    <!-- 入力セクション -->
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">入力</h5>
+        <div class="mb-3">
+          <label for="kapla-count" class="form-label">使用KAPLA数 <span class="text-muted">(最大300)</span>:</label>
+          <input id="kapla-count" type="number" class="form-control" min="0" max="300" value="50" placeholder="例: 50">
+        </div>
+        <div class="mb-3">
+          <label for="weight" class="form-label">耐荷重 (kg):</label>
+          <input id="weight" type="number" class="form-control" min="0" step="0.01" value="1.5" placeholder="例: 1.5">
+        </div>
+        <div class="mb-3">
+          <label for="art-score" class="form-label">芸術点 <span class="text-muted">(0-150)</span>:</label>
+          <input id="art-score" type="number" class="form-control" min="0" max="150" value="120" placeholder="例: 120">
+        </div>
+        <p id="error-message" class="mt-2"></p>
+      </div>
+    </div>
+
+    <!-- 結果セクション -->
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">結果</h5>
+        <p id="result">スコア: </p>
+        <p id="details"></p>
+        <div class="charts-container">
+          <div class="chart-wrapper">
+            <canvas id="bar-chart" width="400" height="200"></canvas>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="pie-chart" width="400" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 設定セクション -->
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">設定</h5>
+        <div class="mb-3">
+          <label for="cost-max" class="form-label">コスト得点の最大値:</label>
+          <input id="cost-max" type="number" class="form-control" value="300">
+        </div>
+        <div class="mb-3">
+          <label for="weight-multiplier" class="form-label">耐荷重の倍率:</label>
+          <input id="weight-multiplier" type="number" class="form-control" value="10">
+        </div>
+      </div>
+    </div>
+
+    <!-- 履歴セクション -->
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">スコア履歴</h5>
+        <table class="table table-striped">
+          <thead>
+            <tr>
+              <th>使用KAPLA数</th>
+              <th>耐荷重(kg)</th>
+              <th>芸術点</th>
+              <th>総得点</th>
+            </tr>
+          </thead>
+          <tbody id="history-body"></tbody>
+        </table>
+        <button id="clear-history" class="btn btn-danger w-100">履歴をクリア</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let barChartInstance = null;
+    let pieChartInstance = null;
+    const historyBody = document.getElementById("history-body");
+
+    function calculateScore(kaplaCount, weight, artScore, costMax, weightMultiplier) {
+      const costScore = costMax - kaplaCount;
+      const weightScore = (weight * 1000 / 20) * weightMultiplier;
+      return { costScore, weightScore, totalScore: costScore + weightScore + artScore };
+    }
+
+    function renderBarChart(costScore, weightScore, artScore) {
+      const ctx = document.getElementById('bar-chart').getContext('2d');
+      if (barChartInstance) {
+        barChartInstance.destroy();
+      }
+      barChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['コスト得点', '耐荷重得点', '芸術点'],
+          datasets: [{
+            label: '得点',
+            data: [costScore, weightScore, artScore],
+            backgroundColor: ['#ff9999', '#99ccff', '#99ff99']
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
+
+    function renderPieChart(costScore, weightScore, artScore) {
+      const ctx = document.getElementById('pie-chart').getContext('2d');
+      if (pieChartInstance) {
+        pieChartInstance.destroy();
+      }
+      pieChartInstance = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: ['コスト得点', '耐荷重得点', '芸術点'],
+          datasets: [{
+            label: 'スコア分布',
+            data: [costScore, weightScore, artScore],
+            backgroundColor: ['#ff9999', '#99ccff', '#99ff99']
+          }]
+        },
+        options: {
+          responsive: true
+        }
+      });
+    }
+
+    function updateScores() {
+      const kaplaCount = parseInt(document.getElementById("kapla-count").value, 10);
+      const weight = parseFloat(document.getElementById("weight").value);
+      const artScore = parseInt(document.getElementById("art-score").value, 10);
+      const costMax = parseInt(document.getElementById("cost-max").value, 10);
+      const weightMultiplier = parseFloat(document.getElementById("weight-multiplier").value);
+      const errorMessage = document.getElementById("error-message");
+
+      if (isNaN(kaplaCount) || kaplaCount < 0 || kaplaCount > 300) {
+        errorMessage.textContent = "KAPLA数は0から300の範囲で入力してください。";
+        return;
+      }
+      if (isNaN(weight) || weight < 0) {
+        errorMessage.textContent = "耐荷重は0以上の値を入力してください。";
+        return;
+      }
+      if (isNaN(artScore) || artScore < 0 || artScore > 150) {
+        errorMessage.textContent = "芸術点は0から150の範囲で入力してください。";
+        return;
+      }
+
+      errorMessage.textContent = "";
+      const { costScore, weightScore, totalScore } = calculateScore(kaplaCount, weight, artScore, costMax, weightMultiplier);
+
+      document.getElementById("result").textContent = `スコア: ${totalScore.toFixed(2)}`;
+      document.getElementById("details").textContent = `詳細: コスト得点=${costScore.toFixed(2)}, 耐荷重得点=${weightScore.toFixed(2)}, 芸術点=${artScore}`;
+
+      renderBarChart(costScore, weightScore, artScore);
+      renderPieChart(costScore, weightScore, artScore);
+
+      const newRow = `<tr><td>${kaplaCount}</td><td>${weight.toFixed(2)}</td><td>${artScore}</td><td>${totalScore.toFixed(2)}</td></tr>`;
+      historyBody.insertAdjacentHTML('beforeend', newRow);
+    }
+
+    document.querySelectorAll("#kapla-count, #weight, #art-score, #cost-max, #weight-multiplier").forEach(input => {
+      input.addEventListener("input", updateScores);
+    });
+
+    document.getElementById("clear-history").addEventListener("click", () => {
+      historyBody.innerHTML = "";
+    });
+
+    updateScores();
+  </script>
+</body>
+</html>
